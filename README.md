@@ -43,7 +43,7 @@ integer, one is dealing with a commensurate lattice match.
 
 The epitaxy matrix, as given in the work quoted above, reads:
 
-( px, qy )
+( px, qy )  
 ( qx, py )
 
 with:
