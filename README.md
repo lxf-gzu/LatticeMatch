@@ -2,7 +2,7 @@
 
 
 ## Licence info:
-Copyright (C) 2012 Andreas Grois
+Copyright (C) 2015 Andreas Grois
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
