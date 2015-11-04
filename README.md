@@ -25,6 +25,7 @@ Fritz, Torsten: Molecular Architecture in Heteroepitaxially Grown Organic Thin F
 Dresden: sfps - Wissenschaftlicher Fachverlag, 1999
 ISBN: 3-934264-50-6
 
+
 The advantage of this script compared to the original work of T. Fritz is, that this
 program does not use a brute-force approach, but instead determines ranges of possible
 values for the angle between the first lattice vectors of the interface unit cell of
@@ -43,15 +44,17 @@ integer, one is dealing with a commensurate lattice match.
 
 The epitaxy matrix, as given in the work quoted above, reads:
 
+```math
 ( px, qy )  
 ( qx, py )
-
+```
 with:
+```math
 px=b1*sin(alpha-theta)/(a1*sin(alpha))
 qx=b2*sin(alpha-theta-beta)/(a1*sin(alpha))
 qy=b1*sin(theta)/(a2*sin(alpha))
 py=b2*sin(theta+beta)/(a2*sin(alpha))
-
+```
 There are two reasons for the length of this program:
 o) asin isn't unique.
 o) ranges of angles are a pain to deal with.
