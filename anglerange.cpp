@@ -98,7 +98,7 @@ anglerange anglerange::overlap(const anglerange &other)
         //Here we need to take care to always follow the counter-clockwise convention.
         //This leaves us with four possibilities:
         //a) Both ranges contain the zero-line
-        //b) This range contains the zero-line, the other doesn'T
+        //b) This range contains the zero-line, the other doesn't
         //c) Vice versa
         //d) Both ranges are regular.
 
@@ -164,6 +164,88 @@ anglerange anglerange::overlap(const anglerange &other)
                 if(curmax>=curmin){
                     retval.setlower(curmin);
                     retval.setupper(curmax);
+                }
+            }
+        }
+    }
+    return(retval);
+}
+
+anglerange anglerange::combine(const anglerange &other)
+{
+    anglerange retval;
+    //check if any of the ranges is empty. If yes: return an empty range as well.
+    if(!(isempty()) && !(other.isempty())){
+        //Here we need to take care to always follow the counter-clockwise convention.
+        //This leaves us with four possibilities:
+        //a) Both ranges contain the zero-line
+        //b) This range contains the zero-line, the other doesn't
+        //c) Vice versa
+        //d) Both ranges are regular.
+
+        //first check if this range contains the zero-line
+        if(lowerborder>upperborder)
+        {
+            //ok, this range is around zero. Let's check the other one too:
+            if(other.getlower()>other.getupper())
+            {
+                //ok, both ranges contain the zero-line.
+                retval.setlower(fmin(lowerborder.getval(),other.getlower().getval()));
+                retval.setupper(fmax(upperborder.getval(),other.getupper().getval()));
+            }
+            else
+            {
+                //this contains zero, other doesn't.
+                //This cannot fully lie within other, but other can lie fully within this.
+                //The result does obviously contain zero.
+                //Let's check if other is within this.
+                if(other.getupper()<=upperborder || other.getlower()>=lowerborder){
+                    retval.setlower(lowerborder);
+                    retval.setupper(upperborder);
+                }
+                else if(other.getupper()>=lowerborder) //not >, as per definition upperborder is inside range
+                {
+                    retval.setlower(other.getlower());
+                    retval.setupper(upperborder);
+                }
+                else if(other.getlower()<=upperborder) //not <, as again upperborder is inside.
+                {
+                    retval.setlower(lowerborder);
+                    retval.setupper(other.getupper());
+                }
+            }
+        }
+        else
+        {
+            //this is regular, is other as well?
+            if(other.getlower()>other.getupper())
+            {
+                //so, other cannot lie in this, but this can be in other.
+                //Let's check for that.
+                if(upperborder<=other.getupper() || lowerborder>=other.getlower()){
+                    retval.setlower(other.getlower());
+                    retval.setupper(other.getupper());
+                }
+                else if(lowerborder <= other.getupper())
+                {
+                    retval.setlower(other.getlower());
+                    retval.setupper(upperborder);
+                }
+                else if(upperborder >= other.getlower())
+                {
+                    retval.setlower(lowerborder);
+                    retval.setupper(other.getupper());
+                }
+            }
+            else //both ranges regular
+            {
+                //check if there's an overlap
+                double curmax = fmin(other.getupper().getval(),upperborder.getval());
+                double curmin = fmax(other.getlower().getval(),lowerborder.getval());
+                if(curmax>=curmin){
+                    //there is an overlap - set limits
+                    retval.setlower(fmin(other.getlower().getval(),lowerborder.getval()));
+                    retval.setupper(fmax(other.getupper().getval(),upperborder.getval()));
                 }
             }
         }

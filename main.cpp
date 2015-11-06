@@ -67,6 +67,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include "anglerange.h"
 
 using namespace std;
@@ -352,7 +353,7 @@ int main(int argc, char* argv[])
                 }
             }
         }
-
+/*
         cout << "Possible coincident lattice matches with px, qx:" << std::endl;
         for(i=0;i<xoverlaps.size();i++)
         {
@@ -362,6 +363,86 @@ int main(int argc, char* argv[])
         for(i=0;i<yoverlaps.size();i++)
         {
             cout << (yoverlaps.at(i)).getlower().getval()*180/M_PI << " " << (yoverlaps.at(i)).getupper().getval()*180/M_PI << std::endl;
+        }
+*/
+        //to make the output more readable, combine the ranges.
+        //first: copy xranges and yranges together:
+        std::vector<anglerange> ranges;
+        ranges.reserve(xoverlaps.size()+yoverlaps.size()+1);
+        ranges.insert(ranges.end(),xoverlaps.begin(),xoverlaps.end());
+        ranges.insert(ranges.end(),yoverlaps.begin(),yoverlaps.end());
+        if(ranges.size()>1) //combining elements only makes sense, if there are at least 2 elements to combine...
+        {
+            bool stop;
+            do
+            {
+                i=0;
+                stop=false;
+                do
+                {
+                    j=i+1;
+                    do
+                    {
+                        anglerange tmp = ranges.at(i).combine(ranges.at(j));
+                        if(!(tmp.isempty()))
+                        {
+                            stop=true;
+                            ranges.push_back(tmp);
+                            ranges.erase(ranges.begin()+j);
+                            ranges.erase(ranges.begin()+i);
+                        }
+                        j++;
+                    }
+                    while(!stop && j<ranges.size());
+                    i++;
+                }
+                while(!stop && i<ranges.size()-1); //the -1 is there, as for i=ranges.size() there is no valid j any more.
+            }
+            while(stop); //yes, here is stop, not !stop, as stop means: stop to iterate over elements, go back to main loop, which should only terminate, if the internal loops finished.
+        }
+
+        //the same thing for commensurate...
+        if(commensurate.size()>1)
+        {
+            bool stop;
+            do
+            {
+                i=0;
+                stop=false;
+                do
+                {
+                    j=i+1;
+                    do
+                    {
+                        anglerange tmp = commensurate.at(i).combine(commensurate.at(j));
+                        if(!(tmp.isempty()))
+                        {
+                            stop=true;
+                            commensurate.push_back(tmp);
+                            commensurate.erase(commensurate.begin()+j);
+                            commensurate.erase(commensurate.begin()+i);
+                        }
+                        j++;
+                    }
+                    while(!stop && j<commensurate.size());
+                    i++;
+                }
+                while(!stop && i<commensurate.size()-1); //the -1 is there, as for i=commensurate.size() there is no valid j any more.
+            }
+            while(stop); //yes, here is stop, not !stop, as stop means: stop to iterate over elements, go back to main loop, which should only terminate, if the internal loops finished.
+        }
+
+        //again,for readability: sort the ranges by their lower limit:
+        {
+            std::sort(ranges.begin(),ranges.end(),[](const anglerange &a,const anglerange &b){return(a.getlower()<b.getlower());});
+            std::sort(commensurate.begin(),commensurate.end(),[](const anglerange &a,const anglerange &b){return(a.getlower()<b.getlower());});
+        }
+
+
+        cout << "Possible coincident lattice matches:" << std::endl;
+        for(i=0;i<ranges.size();i++)
+        {
+            cout << (ranges.at(i)).getlower().getval()*180/M_PI << " " << (ranges.at(i)).getupper().getval()*180/M_PI << std::endl;
         }
         cout << "Possible commensurate lattice matches:" << std::endl;
         for(i=0;i<commensurate.size();i++)
