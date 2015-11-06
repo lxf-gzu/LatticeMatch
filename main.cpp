@@ -96,13 +96,13 @@ int main(int argc, char* argv[])
         //to make sure that the minimum values are actually smaller than the maximum numbers. Also, we need radians, not degrees.
         if(commargs[B1MIN]*commargs[B2MIN]<0 || commargs[B1MAX]*commargs[B2MAX]<0 || commargs[B1MIN]*commargs[B1MAX]<0)
         {
-            fprintf(stderr,"Warning: negative values for b1, b2 don't make any sense. Putting them back in order.\n");
+            std::cerr << "Warning: negative values for b1, b2 don't make any sense. Putting them back in order." << std::endl;
             commargs[BETAMIN]=180-commargs[BETAMIN];
             commargs[BETAMAX]=180-commargs[BETAMAX];
         }
         if(commargs[A1]*commargs[A2]<0)
         {
-            fprintf(stderr,"Warning: negative values for a1, a2 don't make any sense. Putting them back in order.\n");
+            std::cerr << "Warning: negative values for a1, a2 don't make any sense. Putting them back in order." << std::endl;
             commargs[ALPHA]=180-commargs[ALPHA];
         }
         for(i=B1MIN;i<=B2MAX;i++)
@@ -116,15 +116,18 @@ int main(int argc, char* argv[])
         commargs[BETAMAX]=(commargs[BETAMAX]-360*floor(commargs[BETAMAX]/360.0))*M_PI/180.0;
         commargs[ALPHA]=(commargs[ALPHA]-360*floor(commargs[ALPHA]/360.0))*M_PI/180.0;
 
-        for(i=0;i<3;i++){
-          if(commargs[2*i+3]>commargs[2*i+1+3]){
-        swapper = commargs[2*i+3];
-        commargs[2*i+3] = commargs[2*i+1+3];
-        commargs[2*i+1+3] = swapper;
-          }
+        for(i=0;i<3;i++)
+        {
+            if(commargs[2*i+3]>commargs[2*i+1+3])
+            {
+                swapper = commargs[2*i+3];
+                commargs[2*i+3] = commargs[2*i+1+3];
+                commargs[2*i+1+3] = swapper;
+            }
         }
-        if(commargs[BETAMAX]-commargs[BETAMIN]>M_PI){
-          fprintf(stderr,"Warning: Sanitized betamax and betamin are more than 180 degrees apart.\n\tThat's probably not what you intended. betamax: %lf, betamin: %lf\n\tAre you trying to use put a beta range including zero? Edit the source code for that...\n",commargs[BETAMAX]*180.0/M_PI,commargs[BETAMIN]*180.0/M_PI);
+        if(commargs[BETAMAX]-commargs[BETAMIN]>M_PI)
+        {
+            std::cerr << "Warning: Sanitized betamax and betamin are more than 180 degrees apart.\n\tThat's probably not what you intended. betamax: " << commargs[BETAMAX]*180.0/M_PI << ", betamin: " << commargs[BETAMIN]*180.0/M_PI << "\n\tAre you trying to use put a beta range including zero? Edit the source code for that..." << std::endl;
         }
         //Now the input should be sanitized.
         //determine number of ranges for px, qx
@@ -143,72 +146,79 @@ int main(int argc, char* argv[])
         //first the special case n=0:
         pxranges[0].setlower(commargs[ALPHA]);
         pxranges[0].setupper(commargs[ALPHA]);
-        pxranges[1].setlower(commargs[ALPHA]-M_PI);
-        pxranges[1].setupper(commargs[ALPHA]-M_PI);
+        pxranges[1].setlower(commargs[ALPHA] - M_PI);
+        pxranges[1].setupper(commargs[ALPHA] - M_PI);
         //now the slightly more difficult case: n>0
         for(i=1;i<=maxn;i++){
+            //while factoring out the asin doesn't improve performance much - it's only used twice, it improves readability, as the important thing in the formulas below
+            //are the signs.
+            //the fmax and fmin are there, because maxn was calculated using B1MAX. Witht B1MIN the argument of arcsine can very well be outside its defined range.
+            double asina1b1min=asin(fmax(-1.0,fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
+            double asina1b1max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]);
             //we need to consider that sin(alpha) can be negative. In that case the sign of the asin will change as well.
-            if(sin(commargs[ALPHA])>=0)
+            if(asina1b1min>=0)
             {
-                pxranges[2*i].setlower(commargs[ALPHA]-asin(fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i].setupper(commargs[ALPHA]-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+1].setlower(commargs[ALPHA]-M_PI+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+1].setupper(commargs[ALPHA]-M_PI+asin(fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
+                pxranges[2*i].setlower(commargs[ALPHA] - asina1b1min);
+                pxranges[2*i].setupper(commargs[ALPHA] - asina1b1max);
+                pxranges[2*i+1].setlower(commargs[ALPHA] - M_PI + asina1b1max);
+                pxranges[2*i+1].setupper(commargs[ALPHA] - M_PI + asina1b1min);
                 //and the most difficult case: n<0
                 //here the arcsin is negative. as i is positive, I'll just change the sign in front of the arcsin.
-                pxranges[2*i+2*maxn].setlower(commargs[ALPHA]+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+2*maxn].setupper(commargs[ALPHA]+asin(fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA]-M_PI-asin(fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA]-M_PI-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
+                pxranges[2*i+2*maxn].setlower(commargs[ALPHA] + asina1b1max);
+                pxranges[2*i+2*maxn].setupper(commargs[ALPHA] + asina1b1min);
+                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA] - M_PI - asina1b1min);
+                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA] - M_PI - asina1b1max);
             }
             else
             {
-                pxranges[2*i].setupper(commargs[ALPHA]-asin(fmax(-1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i].setlower(commargs[ALPHA]-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+1].setupper(commargs[ALPHA]-M_PI+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+1].setlower(commargs[ALPHA]-M_PI+asin(fmax(-1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                //and the most difficult case: n<0
-                //here the arcsin is negative. as i is positive, I'll just change the sign in front of the arcsin.
-                pxranges[2*i+2*maxn].setupper(commargs[ALPHA]+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                pxranges[2*i+2*maxn].setlower(commargs[ALPHA]+asin(fmax(-1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA]-M_PI-asin(fmax(-1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA]-M_PI-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]));
+                //just as above, but with upper and lower limits switched
+                pxranges[2*i].setlower(commargs[ALPHA] - asina1b1max);
+                pxranges[2*i].setupper(commargs[ALPHA] - asina1b1min);
+                pxranges[2*i+1].setlower(commargs[ALPHA] - M_PI + asina1b1min);
+                pxranges[2*i+1].setupper(commargs[ALPHA] - M_PI + asina1b1max);
+                //n<0
+                pxranges[2*i+2*maxn].setlower(commargs[ALPHA] + asina1b1min);
+                pxranges[2*i+2*maxn].setupper(commargs[ALPHA] + asina1b1max);
+                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA] - M_PI - asina1b1max);
+                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA] - M_PI - asina1b1min);
             }
         }
         //same nonsense for qxranges
         //first the easy part: m=0;
-        qxranges[0].setlower(commargs[ALPHA]-commargs[BETAMAX]);
-        qxranges[0].setupper(commargs[ALPHA]-commargs[BETAMIN]);
-        qxranges[1].setlower(commargs[ALPHA]-commargs[BETAMAX]-M_PI);
-        qxranges[1].setupper(commargs[ALPHA]-commargs[BETAMIN]-M_PI);
+        qxranges[0].setlower(commargs[ALPHA] - commargs[BETAMAX]);
+        qxranges[0].setupper(commargs[ALPHA] - commargs[BETAMIN]);
+        qxranges[1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI);
+        qxranges[1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI);
         //now the slightly more difficult case: m>0;
         for(i=1;i<=maxm;i++){
+            //also here, the asin values are factored out for improved readability.
+            double asina1b2min=asin(fmax(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0),-1.0));
+            double asina1b2max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]);
             //same here: keep in mind that sin(alpha) can be negative:
-            if(sin(commargs[ALPHA])>=0)
+            if(asina1b2min>=0)
             {
-                qxranges[2*i].setlower(commargs[ALPHA]-commargs[BETAMAX]-asin(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0)));
-                qxranges[2*i].setupper(commargs[ALPHA]-commargs[BETAMIN]-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+1].setlower(commargs[ALPHA]-commargs[BETAMAX]-M_PI+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+1].setupper(commargs[ALPHA]-commargs[BETAMIN]-M_PI+asin(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0)));
+                qxranges[2*i].setlower(commargs[ALPHA] - commargs[BETAMAX] - asina1b2min);
+                qxranges[2*i].setupper(commargs[ALPHA] - commargs[BETAMIN] - asina1b2max);
+                qxranges[2*i+1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2max);
+                qxranges[2*i+1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2min);
                 //and last, but not leasst, the most difficult, m<0 - here the arcsin is negative;
                 //as i is positive, I'll just change the sign in front of the arcsin.
-                qxranges[2*i+2*maxm].setlower(commargs[ALPHA]-commargs[BETAMAX]+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+2*maxm].setupper(commargs[ALPHA]-commargs[BETAMIN]+asin(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0)));
-                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA]-commargs[BETAMAX]-M_PI - asin(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0)));
-                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA]-commargs[BETAMIN]-M_PI - asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
+                qxranges[2*i+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] + asina1b2max);
+                qxranges[2*i+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] + asina1b2min);
+                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2min);
+                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2max);
             }
             else
             {
-                qxranges[2*i].setupper(commargs[ALPHA]-commargs[BETAMIN]-asin(fmax(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],-1.0)));
-                qxranges[2*i].setlower(commargs[ALPHA]-commargs[BETAMAX]-asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+1].setupper(commargs[ALPHA]-commargs[BETAMIN]-M_PI+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+1].setlower(commargs[ALPHA]-commargs[BETAMAX]-M_PI+asin(fmax(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],-1.0)));
-                //and last, but not leasst, the most difficult, m<0 - here the arcsin is negative;
-                //as i is positive, I'll just change the sign in front of the arcsin.
-                qxranges[2*i+2*maxm].setupper(commargs[ALPHA]-commargs[BETAMIN]+asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
-                qxranges[2*i+2*maxm].setlower(commargs[ALPHA]-commargs[BETAMAX]+asin(fmax(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],-1.0)));
-                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA]-commargs[BETAMIN]-M_PI - asin(fmax(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],-1.0)));
-                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA]-commargs[BETAMAX]-M_PI - asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]));
+                qxranges[2*i].setlower(commargs[ALPHA] - commargs[BETAMAX] - asina1b2max);
+                qxranges[2*i].setupper(commargs[ALPHA] - commargs[BETAMIN] - asina1b2min);
+                qxranges[2*i+1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2min);
+                qxranges[2*i+1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2max);
+                //m<0
+                qxranges[2*i+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] + asina1b2min);
+                qxranges[2*i+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] + asina1b2max);
+                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2max);
+                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2min);
             }
         }
         //Now the real big change from the plain C version: Using the anglerange class to generate a list
@@ -243,68 +253,74 @@ int main(int argc, char* argv[])
         qyranges[1].setupper(M_PI);
         for(i=1;i<=maxo;i++)
         {
+            //also here: factor out the asin for improved readability.
+            double asina2b1min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
+            double asina2b1max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]);
             //is sin(alpha)>0?
-            if(sin(commargs[ALPHA])>=0)
+            if(asina2b1max>=0)
             {
                 //case: o>0
-                qyranges[2*i].setlower(asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i].setupper(asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+1].setlower(M_PI-asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+1].setupper(M_PI-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
+                qyranges[2*i].setlower(asina2b1max);
+                qyranges[2*i].setupper(asina2b1min);
+                qyranges[2*i+1].setlower(M_PI - asina2b1min);
+                qyranges[2*i+1].setupper(M_PI - asina2b1max);
                 //case: o<0
-                qyranges[2*i+2*maxo].setlower(-asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+2*maxo].setupper(-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i+1+2*maxo].setlower(M_PI+asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i+1+2*maxo].setupper(M_PI+asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
+                qyranges[2*i+2*maxo].setlower( -asina2b1min);
+                qyranges[2*i+2*maxo].setupper( -asina2b1max);
+                qyranges[2*i+1+2*maxo].setlower(M_PI + asina2b1max);
+                qyranges[2*i+1+2*maxo].setupper(M_PI + asina2b1min);
             }
             else
             {
                 //case: o>0
-                qyranges[2*i].setupper(asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i].setlower(asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+1].setupper(M_PI-asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+1].setlower(M_PI-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
+                qyranges[2*i].setlower(asina2b1min);
+                qyranges[2*i].setupper(asina2b1max);
+                qyranges[2*i+1].setlower(M_PI - asina2b1max);
+                qyranges[2*i+1].setupper(M_PI - asina2b1min);
                 //case: o<0
-                qyranges[2*i+2*maxo].setupper(-asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-                qyranges[2*i+2*maxo].setlower(-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i+1+2*maxo].setupper(M_PI+asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]));
-                qyranges[2*i+1+2*maxo].setlower(M_PI+asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
+                qyranges[2*i+2*maxo].setlower( -asina2b1max);
+                qyranges[2*i+2*maxo].setupper( -asina2b1min);
+                qyranges[2*i+1+2*maxo].setlower(M_PI + asina2b1min);
+                qyranges[2*i+1+2*maxo].setupper(M_PI + asina2b1max);
             }
         }
         //that was too easy. Probably it's buggy as hell...
         //now to py
-        pyranges[0].setlower(-commargs[BETAMAX]);
-        pyranges[0].setupper(-commargs[BETAMIN]);
-        pyranges[1].setlower(M_PI-commargs[BETAMAX]);
-        pyranges[1].setupper(M_PI-commargs[BETAMIN]);
+        pyranges[0].setlower( -commargs[BETAMAX]);
+        pyranges[0].setupper( -commargs[BETAMIN]);
+        pyranges[1].setlower(M_PI - commargs[BETAMAX]);
+        pyranges[1].setupper(M_PI - commargs[BETAMIN]);
         for(i=1;i<=maxp;i++)
         {
-            if(sin(commargs[ALPHA])>=0)
+            //and again: readability
+            double asina2b2min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN])));
+            double asina2b2max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX]);
+            if(asina2b2max>=0)
             {
                 //case: p>0
-                pyranges[2*i].setlower(asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMAX]);
-                pyranges[2*i].setupper(asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMIN]);
-                pyranges[2*i+1].setlower(M_PI-asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMAX]);
-                pyranges[2*i+1].setupper(M_PI-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMIN]);
+                pyranges[2*i].setlower(asina2b2max - commargs[BETAMAX]);
+                pyranges[2*i].setupper(asina2b2min - commargs[BETAMIN]);
+                pyranges[2*i+1].setlower(M_PI - asina2b2min - commargs[BETAMAX]);
+                pyranges[2*i+1].setupper(M_PI - asina2b2max - commargs[BETAMIN]);
                 //case: p<0
-                pyranges[2*i+2*maxp].setlower(-asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMAX]);
-                pyranges[2*i+2*maxp].setupper(-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMIN]);
-                pyranges[2*i+1+2*maxp].setlower(M_PI+asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMAX]);
-                pyranges[2*i+1+2*maxp].setupper(M_PI+asin(fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMIN]);
+                pyranges[2*i+2*maxp].setlower( -asina2b2min - commargs[BETAMAX]);
+                pyranges[2*i+2*maxp].setupper( -asina2b2max - commargs[BETAMIN]);
+                pyranges[2*i+1+2*maxp].setlower(M_PI + asina2b2max - commargs[BETAMAX]);
+                pyranges[2*i+1+2*maxp].setupper(M_PI + asina2b2min - commargs[BETAMIN]);
             }
             else
             {
                 //ok, here the asin is of opposite sign!
                 //case p>0
-                pyranges[2*i].setupper(asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMIN]);
-                pyranges[2*i].setlower(asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMAX]);
-                pyranges[2*i+1].setupper(M_PI-asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMIN]);
-                pyranges[2*i+1].setlower(M_PI-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMAX]);
+                pyranges[2*i].setlower(asina2b2min - commargs[BETAMAX]);
+                pyranges[2*i].setupper(asina2b2max - commargs[BETAMIN]);
+                pyranges[2*i+1].setlower(M_PI - asina2b2max - commargs[BETAMAX]);
+                pyranges[2*i+1].setupper(M_PI - asina2b2min - commargs[BETAMIN]);
                 //case: p<0
-                pyranges[2*i+2*maxp].setupper(-asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMIN]);
-                pyranges[2*i+2*maxp].setlower(-asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMAX]);
-                pyranges[2*i+1+2*maxp].setupper(M_PI+asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX])-commargs[BETAMIN]);
-                pyranges[2*i+1+2*maxp].setlower(M_PI+asin(fmax(-1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN]))-commargs[BETAMAX]);
+                pyranges[2*i+2*maxp].setlower( -asina2b2max - commargs[BETAMAX]);
+                pyranges[2*i+2*maxp].setupper( -asina2b2min - commargs[BETAMIN]);
+                pyranges[2*i+1+2*maxp].setlower(M_PI + asina2b2min - commargs[BETAMAX]);
+                pyranges[2*i+1+2*maxp].setupper(M_PI + asina2b2max - commargs[BETAMIN]);
             }
         }
         //99 bottles of bugs on the wall, 99 bottles of bugs. You get one down and fix it up, 99 bottles of bugs...
@@ -323,6 +339,7 @@ int main(int argc, char* argv[])
             }
         }
 
+        //to be a commensurate match, an angle has to be in both, x- and yoverlaps
         std::vector<anglerange> commensurate;
         for(i=0;i<xoverlaps.size();i++)
         {
