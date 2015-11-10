@@ -52,58 +52,58 @@ void angleclass::setval(const double setme)
     value=shiftinrange(setme);
 }
 
-double angleclass::getval()
+double angleclass::getval() const
 {
     return(value);
 }
 
-angleclass angleclass::operator *(angleclass other)
+angleclass angleclass::operator *(const angleclass other) const
 {
-    return(angleclass(value*other.getval()));
+    return(angleclass(value*other.value));
 }
 
 
-angleclass angleclass::operator-(angleclass other)
+angleclass angleclass::operator-(const angleclass other) const
 {
-    return(angleclass(value-other.getval()));
+    return(angleclass(value-other.value));
 }
 
-angleclass angleclass::operator+(angleclass other)
+angleclass angleclass::operator+(const angleclass other) const
 {
-    return(angleclass(value+other.getval()));
+    return(angleclass(value+other.value));
 }
 
-angleclass angleclass::operator/(angleclass other)
+angleclass angleclass::operator/(const angleclass other) const
 {
-    return(angleclass(value/other.getval()));
+    return(angleclass(value/other.value));
 }
 
-bool angleclass::operator<(angleclass other)
+bool angleclass::operator<(const angleclass other) const
 {
-    return(value<other.getval());
+    return(value<other.value);
 }
 
-bool angleclass::operator>(angleclass other)
+bool angleclass::operator>(const angleclass other) const
 {
-    return(value>other.getval());
+    return(value>other.value);
 }
 
-bool angleclass::operator<=(angleclass other)
+bool angleclass::operator<=(const angleclass other) const
 {
-    return(value<=other.getval());
+    return(value<=other.value);
 }
 
-bool angleclass::operator>=(angleclass other)
+bool angleclass::operator>=(const angleclass other) const
 {
-    return(value>=other.getval());
+    return(value>=other.value);
 }
 
-bool angleclass::operator==(angleclass other)
+bool angleclass::operator==(const angleclass other) const
 {
-    return(value==other.getval());
+    return(value==other.value);
 }
 
-bool angleclass::operator!=(angleclass other)
+bool angleclass::operator!=(const angleclass other) const
 {
-    return(value!=other.getval());
+    return(value!=other.value);
 }

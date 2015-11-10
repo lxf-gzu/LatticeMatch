@@ -43,6 +43,8 @@ anglerange::anglerange()
     upperborder = angleclass(0.0);
     upperset = false;
     lowerset = false;
+    fullcircle= false;
+    sortby = SRT_SIZE;
 }
 
 anglerange::anglerange(const angleclass &lower, const angleclass &upper)
@@ -51,6 +53,8 @@ anglerange::anglerange(const angleclass &lower, const angleclass &upper)
     upperborder = upper;
     upperset = true;
     lowerset = true;
+    fullcircle = false;
+    sortby = SRT_SIZE;
 }
 
 bool anglerange::isempty() const
@@ -84,17 +88,81 @@ void anglerange::setempty()
 {
     upperset = false;
     lowerset = false;
-    lowerborder = 0.0;
-    upperborder = 0.0;
+    fullcircle = false;
+//    lowerborder = 0.0;
+//    upperborder = 0.0;
+//commented out, as users (I) should not rely on this.
+}
+
+void anglerange::setsorttype(const anglerange::sorttype value)
+{
+    sortby=value;
+}
+
+const anglerange::sorttype anglerange::getsorttype()
+{
+    return(sortby);
+}
+
+bool anglerange::iscircle() const
+{
+    return(fullcircle && !isempty());
+}
+
+void anglerange::setcircle(bool value)
+{
+    if(value)
+    {
+        lowerset=true;
+        upperset=true;
+        lowerborder=0.0;
+        upperborder=0.0;
+    }
+    fullcircle=value;
+}
+
+bool anglerange::isinside(const angleclass &val) const
+{
+    if(isempty())
+    {
+        return(false);
+    }
+    else
+    {
+        if(fullcircle)
+        {
+            return(true);
+        }
+        else if(lowerborder>upperborder)
+        {
+            return((val>=lowerborder || val<=upperborder));
+        }
+        else
+        {
+            return(val>=lowerborder && val<=upperborder);
+        }
+    }
 }
 
 anglerange anglerange::overlap(const anglerange &other)
 {
     //storage for the return value:
     anglerange retval; //anglerange constructor without arguments: emtpy range [0:0]
+    retval.setsorttype(sortby); //return value inherits current sorttype.
     //first: if one of the input ranges is empty, don't do anything, leave retval empty!
+
     if(!(isempty()) && !(other.isempty()))
     {
+        //special treatment if one of the ranges is a full circle:
+        if(fullcircle)
+        {
+            retval = other;
+            retval.setsorttype(sortby);
+        }
+        else if(other.fullcircle)
+        {
+            retval = *this;
+        }
         //Here we need to take care to always follow the counter-clockwise convention.
         //This leaves us with four possibilities:
         //a) Both ranges contain the zero-line
@@ -103,7 +171,7 @@ anglerange anglerange::overlap(const anglerange &other)
         //d) Both ranges are regular.
 
         //first check if this range contains the zero-line
-        if(lowerborder>upperborder)
+        else if(lowerborder>upperborder)
         {
             //ok, this range is around zero. Let's check the other one too:
             if(other.getlower()>other.getupper())
@@ -174,8 +242,19 @@ anglerange anglerange::overlap(const anglerange &other)
 anglerange anglerange::combine(const anglerange &other)
 {
     anglerange retval;
+    retval.setsorttype(sortby); //return value inherits current sorttype.
     //check if any of the ranges is empty. If yes: return an empty range as well.
     if(!(isempty()) && !(other.isempty())){
+        //again: special treatment if one of the ranges is a full circle:
+        if(fullcircle)
+        {
+            retval = *this;
+        }
+        if(other.fullcircle)
+        {
+            retval = other;
+            retval.setsorttype(sortby);
+        }
         //Here we need to take care to always follow the counter-clockwise convention.
         //This leaves us with four possibilities:
         //a) Both ranges contain the zero-line
@@ -184,14 +263,23 @@ anglerange anglerange::combine(const anglerange &other)
         //d) Both ranges are regular.
 
         //first check if this range contains the zero-line
-        if(lowerborder>upperborder)
+        else if(lowerborder>upperborder)
         {
             //ok, this range is around zero. Let's check the other one too:
             if(other.getlower()>other.getupper())
             {
                 //ok, both ranges contain the zero-line.
-                retval.setlower(fmin(lowerborder.getval(),other.getlower().getval()));
-                retval.setupper(fmax(upperborder.getval(),other.getupper().getval()));
+                //let's see if the result is a full circle
+                if(lowerborder<=other.upperborder || other.lowerborder <=upperborder)
+                {
+                    //full circle
+                    retval.setcircle(true);
+                }
+                else
+                {
+                    retval.setlower(fmin(lowerborder.getval(),other.getlower().getval()));
+                    retval.setupper(fmax(upperborder.getval(),other.getupper().getval()));
+                }
             }
             else
             {
@@ -202,6 +290,11 @@ anglerange anglerange::combine(const anglerange &other)
                 if(other.getupper()<=upperborder || other.getlower()>=lowerborder){
                     retval.setlower(lowerborder);
                     retval.setupper(upperborder);
+                }
+                //again: check if result is a full circle
+                else if(other.lowerborder<=upperborder && other.upperborder>=lowerborder)
+                {
+                    retval.setcircle(true);
                 }
                 else if(other.getupper()>=lowerborder) //not >, as per definition upperborder is inside range
                 {
@@ -226,6 +319,11 @@ anglerange anglerange::combine(const anglerange &other)
                     retval.setlower(other.getlower());
                     retval.setupper(other.getupper());
                 }
+                //full circle?
+                else if(lowerborder <= other.getupper() && upperborder >= other.getlower())
+                {
+                    retval.setcircle(true);
+                }
                 else if(lowerborder <= other.getupper())
                 {
                     retval.setlower(other.getlower());
@@ -239,6 +337,7 @@ anglerange anglerange::combine(const anglerange &other)
             }
             else //both ranges regular
             {
+                //this also means: none of them contains zero, the result cannot be a full circle
                 //check if there's an overlap
                 double curmax = fmin(other.getupper().getval(),upperborder.getval());
                 double curmin = fmax(other.getlower().getval(),lowerborder.getval());
@@ -251,4 +350,120 @@ anglerange anglerange::combine(const anglerange &other)
         }
     }
     return(retval);
+}
+
+bool anglerange::operator<(const anglerange &other) const
+{
+    if(isempty() || other.isempty())
+    {
+        return(false);
+    }
+    else
+    {
+        switch(sortby)
+        {
+        case SRT_LOWER:
+            return(lowerborder < other.lowerborder);
+            break;
+        case SRT_UPPER:
+            return(upperborder < other.upperborder);
+            break;
+        case SRT_SIZE:
+            //I know that this if elseif thing can be written as a single statement. This is for readability.
+            if(other.fullcircle)
+            {
+                return(!fullcircle);
+            }
+            else if(fullcircle)
+            {
+                return(false);
+            }
+            else
+            {
+                //angleclass takes care of zero crossing. C++ is awesome.
+                return(upperborder - lowerborder < other.upperborder - other.lowerborder);
+            }
+            break;
+        default:
+            throw std::out_of_range("Invalid sort field set for anglerange! Go, debug.\n");
+        }
+    }
+}
+
+bool anglerange::operator>(const anglerange &other) const
+{
+    //as == doesn't care about sort order but fully compares, we have to implement two sort operators fully...
+    if(isempty() || other.isempty())
+    {
+        return(false);
+    }
+    else
+    {
+        switch(sortby)
+        {
+        case SRT_LOWER:
+            return(lowerborder > other.lowerborder);
+            break;
+        case SRT_UPPER:
+            return(upperborder > other.upperborder);
+            break;
+        case SRT_SIZE:
+            if(fullcircle)
+            {
+                return(!other.fullcircle);
+            }
+            else if(other.fullcircle)
+            {
+                return(false);
+            }
+            else
+            {
+                //angleclass takes care of zero crossing. C++ is awesome.
+                return(upperborder - lowerborder > other.upperborder - other.lowerborder);
+            }
+            break;
+        default:
+            throw std::out_of_range("Invalid sort field set for anglerange! Go, debug.\n");
+        }
+    }
+}
+
+bool anglerange::operator<=(const anglerange &other) const
+{
+    if(isempty() || other.isempty())
+    {
+        return(false);
+    }
+    else
+    {
+        return(!(operator>(other)));
+    }
+}
+bool anglerange::operator>=(const anglerange &other) const
+{
+    if(isempty() || other.isempty())
+    {
+        return(false);
+    }
+    else
+    {
+        return(!(operator<(other)));
+    }
+}
+
+
+bool anglerange::operator==(const anglerange &other) const
+{
+    if(!(isempty()) && !(other.isempty()))
+    {
+        //both ranges set, we need to compare field by field
+        return( (lowerborder == other.lowerborder) &&  (upperborder == other.upperborder) );
+    }
+    else
+        return(isempty() && other.isempty());
+}
+bool anglerange::operator!=(const anglerange &other) const
+{
+    //needn't check for isempty here, as == already checks for it.
+    return(!operator==(other));
 }

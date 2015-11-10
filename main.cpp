@@ -68,7 +68,7 @@
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
-#include "anglerange.h"
+#include "angleset.h"
 
 using namespace std;
 
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     {
         //read in command line arguments
         double commargs[9], swapper;
-        unsigned int i,j;
+        unsigned int i;
         for(i=1;i<(unsigned)argc;i++)
         {
             //what is this stringstreams stuff everyone is hyped about?!?
@@ -139,16 +139,16 @@ int main(int argc, char* argv[])
         //solutions run from -maxn to maxn, and from -maxm to maxm.
         //Due to the ambiguity of asin, two solutions exist for each value of n and m
         //This means, that (2*maxn+1)*2 solutions exist, the same for m.
-        anglerange pxranges[4*maxn+2];
-        anglerange qxranges[4*maxm+2];
+        angleset pxranges;
+        pxranges.reserve(4*maxn+2); //reserve memory, so adding stuff is faster...
+        angleset qxranges;
+        qxranges.reserve(4*maxm+2);
 
         //up to now it was more or less dull C code. Now comes the first real difference:
         //As asin changes sign together with its argument, one has to treat positive and negative n differently
         //first the special case n=0:
-        pxranges[0].setlower(commargs[ALPHA]);
-        pxranges[0].setupper(commargs[ALPHA]);
-        pxranges[1].setlower(commargs[ALPHA] - M_PI);
-        pxranges[1].setupper(commargs[ALPHA] - M_PI);
+        pxranges.add(commargs[ALPHA],commargs[ALPHA]);
+        pxranges.add(commargs[ALPHA] - M_PI, commargs[ALPHA] - M_PI);
         //now the slightly more difficult case: n>0
         for(i=1;i<=maxn;i++){
             //while factoring out the asin doesn't improve performance much - it's only used twice, it improves readability, as the important thing in the formulas below
@@ -159,37 +159,57 @@ int main(int argc, char* argv[])
             //we need to consider that sin(alpha) can be negative. In that case the sign of the asin will change as well.
             if(asina1b1min>=0)
             {
-                pxranges[2*i].setlower(commargs[ALPHA] - asina1b1min);
-                pxranges[2*i].setupper(commargs[ALPHA] - asina1b1max);
-                pxranges[2*i+1].setlower(commargs[ALPHA] - M_PI + asina1b1max);
-                pxranges[2*i+1].setupper(commargs[ALPHA] - M_PI + asina1b1min);
+                pxranges.add(
+                            commargs[ALPHA] - asina1b1min,
+                            commargs[ALPHA] - asina1b1max
+                            );
+                pxranges.add(
+                            commargs[ALPHA] - M_PI + asina1b1max,
+                            commargs[ALPHA] - M_PI + asina1b1min
+                            );
                 //and the most difficult case: n<0
                 //here the arcsin is negative. as i is positive, I'll just change the sign in front of the arcsin.
-                pxranges[2*i+2*maxn].setlower(commargs[ALPHA] + asina1b1max);
-                pxranges[2*i+2*maxn].setupper(commargs[ALPHA] + asina1b1min);
-                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA] - M_PI - asina1b1min);
-                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA] - M_PI - asina1b1max);
+                pxranges.add(
+                            commargs[ALPHA] + asina1b1max,
+                            commargs[ALPHA] + asina1b1min
+                            );
+                pxranges.add(
+                            commargs[ALPHA] - M_PI - asina1b1min,
+                            commargs[ALPHA] - M_PI - asina1b1max
+                            );
             }
             else
             {
                 //just as above, but with upper and lower limits switched
-                pxranges[2*i].setlower(commargs[ALPHA] - asina1b1max);
-                pxranges[2*i].setupper(commargs[ALPHA] - asina1b1min);
-                pxranges[2*i+1].setlower(commargs[ALPHA] - M_PI + asina1b1min);
-                pxranges[2*i+1].setupper(commargs[ALPHA] - M_PI + asina1b1max);
+                pxranges.add(
+                            commargs[ALPHA] - asina1b1max,
+                            commargs[ALPHA] - asina1b1min
+                            );
+                pxranges.add(
+                            commargs[ALPHA] - M_PI + asina1b1min,
+                            commargs[ALPHA] - M_PI + asina1b1max
+                            );
                 //n<0
-                pxranges[2*i+2*maxn].setlower(commargs[ALPHA] + asina1b1min);
-                pxranges[2*i+2*maxn].setupper(commargs[ALPHA] + asina1b1max);
-                pxranges[2*i+2*maxn+1].setlower(commargs[ALPHA] - M_PI - asina1b1max);
-                pxranges[2*i+2*maxn+1].setupper(commargs[ALPHA] - M_PI - asina1b1min);
+                pxranges.add(
+                            commargs[ALPHA] + asina1b1min,
+                            commargs[ALPHA] + asina1b1max
+                            );
+                pxranges.add(
+                            commargs[ALPHA] - M_PI - asina1b1max,
+                            commargs[ALPHA] - M_PI - asina1b1min
+                            );
             }
         }
         //same nonsense for qxranges
         //first the easy part: m=0;
-        qxranges[0].setlower(commargs[ALPHA] - commargs[BETAMAX]);
-        qxranges[0].setupper(commargs[ALPHA] - commargs[BETAMIN]);
-        qxranges[1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI);
-        qxranges[1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI);
+        qxranges.add(
+                    commargs[ALPHA] - commargs[BETAMAX],
+                    commargs[ALPHA] - commargs[BETAMIN]
+                    );
+        qxranges.add(
+                    commargs[ALPHA] - commargs[BETAMAX] - M_PI,
+                    commargs[ALPHA] - commargs[BETAMIN] - M_PI
+                    );
         //now the slightly more difficult case: m>0;
         for(i=1;i<=maxm;i++){
             //also here, the asin values are factored out for improved readability.
@@ -198,60 +218,63 @@ int main(int argc, char* argv[])
             //same here: keep in mind that sin(alpha) can be negative:
             if(asina1b2min>=0)
             {
-                qxranges[2*i].setlower(commargs[ALPHA] - commargs[BETAMAX] - asina1b2min);
-                qxranges[2*i].setupper(commargs[ALPHA] - commargs[BETAMIN] - asina1b2max);
-                qxranges[2*i+1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2max);
-                qxranges[2*i+1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2min);
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - asina1b2min,
+                            commargs[ALPHA] - commargs[BETAMIN] - asina1b2max
+                            );
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2max,
+                            commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2min
+                            );
                 //and last, but not leasst, the most difficult, m<0 - here the arcsin is negative;
                 //as i is positive, I'll just change the sign in front of the arcsin.
-                qxranges[2*i+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] + asina1b2max);
-                qxranges[2*i+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] + asina1b2min);
-                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2min);
-                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2max);
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] + asina1b2max,
+                            commargs[ALPHA] - commargs[BETAMIN] + asina1b2min
+                            );
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2min,
+                            commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2max
+                            );
             }
             else
             {
-                qxranges[2*i].setlower(commargs[ALPHA] - commargs[BETAMAX] - asina1b2max);
-                qxranges[2*i].setupper(commargs[ALPHA] - commargs[BETAMIN] - asina1b2min);
-                qxranges[2*i+1].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2min);
-                qxranges[2*i+1].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2max);
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - asina1b2max,
+                            commargs[ALPHA] - commargs[BETAMIN] - asina1b2min
+                            );
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2min,
+                            commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2max
+                            );
                 //m<0
-                qxranges[2*i+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] + asina1b2min);
-                qxranges[2*i+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] + asina1b2max);
-                qxranges[2*i+1+2*maxm].setlower(commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2max);
-                qxranges[2*i+1+2*maxm].setupper(commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2min);
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] + asina1b2min,
+                            commargs[ALPHA] - commargs[BETAMIN] + asina1b2max
+                            );
+                qxranges.add(
+                            commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2max,
+                            commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2min
+                            );
             }
         }
-        //Now the real big change from the plain C version: Using the anglerange class to generate a list
-        //of overlaps instead of just outputting all of them.
-
-        std::vector<anglerange> xoverlaps; //keep this, as the overlap between this and yoverlaps gives coincident results
-        for(i=0;i<4*maxn+2;i++)
-        {
-            for(j=0;j<4*maxm+2;j++)
-            {
-                anglerange tmp = pxranges[i].overlap(qxranges[j]);
-                if(!(tmp.isempty()))
-                {
-                    xoverlaps.push_back(tmp);
-                }
-            }
-        }
+        //Calculate the overlap between these two:
+        angleset xoverlaps=pxranges.overlap(qxranges);
 
         //ok, same thing for qy, py:
         //I know that this is wasteful regarding RAM, but well, we're still talking about bytes, not about megabytes ;-)
         unsigned int maxo, maxp;
         maxo=fabs(commargs[B1MAX]/(commargs[A2]*sin(commargs[ALPHA])));
         maxp=fabs(commargs[B2MAX]/(commargs[A2]*sin(commargs[ALPHA])));
-        anglerange qyranges[4*maxo+2];
-        anglerange pyranges[4*maxp+2];
+        angleset qyranges;
+        qyranges.reserve(4*maxo+2);
+        angleset pyranges;
+        pyranges.reserve(4*maxp+2);
 
         //now let's start with qyranges. As previously we need to consider the "sign" of o,p, and sin(alpha)
         //first: o=0
-        qyranges[0].setlower(0.0);
-        qyranges[0].setupper(0.0);
-        qyranges[1].setlower(M_PI);
-        qyranges[1].setupper(M_PI);
+        qyranges.add(0.0,0.0);
+        qyranges.add(M_PI,M_PI);
         for(i=1;i<=maxo;i++)
         {
             //also here: factor out the asin for improved readability.
@@ -261,36 +284,56 @@ int main(int argc, char* argv[])
             if(asina2b1max>=0)
             {
                 //case: o>0
-                qyranges[2*i].setlower(asina2b1max);
-                qyranges[2*i].setupper(asina2b1min);
-                qyranges[2*i+1].setlower(M_PI - asina2b1min);
-                qyranges[2*i+1].setupper(M_PI - asina2b1max);
+                qyranges.add(
+                            asina2b1max,
+                            asina2b1min
+                            );
+                qyranges.add(
+                            M_PI - asina2b1min,
+                            M_PI - asina2b1max
+                            );
                 //case: o<0
-                qyranges[2*i+2*maxo].setlower( -asina2b1min);
-                qyranges[2*i+2*maxo].setupper( -asina2b1max);
-                qyranges[2*i+1+2*maxo].setlower(M_PI + asina2b1max);
-                qyranges[2*i+1+2*maxo].setupper(M_PI + asina2b1min);
+                qyranges.add(
+                            -asina2b1min,
+                            -asina2b1max
+                            );
+                qyranges.add(
+                            M_PI + asina2b1max,
+                            M_PI + asina2b1min
+                            );
             }
             else
             {
                 //case: o>0
-                qyranges[2*i].setlower(asina2b1min);
-                qyranges[2*i].setupper(asina2b1max);
-                qyranges[2*i+1].setlower(M_PI - asina2b1max);
-                qyranges[2*i+1].setupper(M_PI - asina2b1min);
+                qyranges.add(
+                            asina2b1min,
+                            asina2b1max
+                            );
+                qyranges.add(
+                            M_PI - asina2b1max,
+                            M_PI - asina2b1min
+                            );
                 //case: o<0
-                qyranges[2*i+2*maxo].setlower( -asina2b1max);
-                qyranges[2*i+2*maxo].setupper( -asina2b1min);
-                qyranges[2*i+1+2*maxo].setlower(M_PI + asina2b1min);
-                qyranges[2*i+1+2*maxo].setupper(M_PI + asina2b1max);
+                qyranges.add(
+                            -asina2b1max,
+                            -asina2b1min
+                            );
+                qyranges.add(
+                            M_PI + asina2b1min,
+                            M_PI + asina2b1max
+                            );
             }
         }
         //that was too easy. Probably it's buggy as hell...
         //now to py
-        pyranges[0].setlower( -commargs[BETAMAX]);
-        pyranges[0].setupper( -commargs[BETAMIN]);
-        pyranges[1].setlower(M_PI - commargs[BETAMAX]);
-        pyranges[1].setupper(M_PI - commargs[BETAMIN]);
+        pyranges.add(
+                    -commargs[BETAMAX],
+                    -commargs[BETAMIN]
+                    );
+        pyranges.add(
+                    M_PI - commargs[BETAMAX],
+                    M_PI - commargs[BETAMIN]
+                    );
         for(i=1;i<=maxp;i++)
         {
             //and again: readability
@@ -299,156 +342,66 @@ int main(int argc, char* argv[])
             if(asina2b2max>=0)
             {
                 //case: p>0
-                pyranges[2*i].setlower(asina2b2max - commargs[BETAMAX]);
-                pyranges[2*i].setupper(asina2b2min - commargs[BETAMIN]);
-                pyranges[2*i+1].setlower(M_PI - asina2b2min - commargs[BETAMAX]);
-                pyranges[2*i+1].setupper(M_PI - asina2b2max - commargs[BETAMIN]);
+                pyranges.add(
+                            asina2b2max - commargs[BETAMAX],
+                            asina2b2min - commargs[BETAMIN]
+                            );
+                pyranges.add(
+                            M_PI - asina2b2min - commargs[BETAMAX],
+                            M_PI - asina2b2max - commargs[BETAMIN]
+                            );
                 //case: p<0
-                pyranges[2*i+2*maxp].setlower( -asina2b2min - commargs[BETAMAX]);
-                pyranges[2*i+2*maxp].setupper( -asina2b2max - commargs[BETAMIN]);
-                pyranges[2*i+1+2*maxp].setlower(M_PI + asina2b2max - commargs[BETAMAX]);
-                pyranges[2*i+1+2*maxp].setupper(M_PI + asina2b2min - commargs[BETAMIN]);
+                pyranges.add(
+                            -asina2b2min - commargs[BETAMAX],
+                            -asina2b2max - commargs[BETAMIN]
+                            );
+                pyranges.add(
+                            M_PI + asina2b2max - commargs[BETAMAX],
+                            M_PI + asina2b2min - commargs[BETAMIN]
+                            );
             }
             else
             {
                 //ok, here the asin is of opposite sign!
                 //case p>0
-                pyranges[2*i].setlower(asina2b2min - commargs[BETAMAX]);
-                pyranges[2*i].setupper(asina2b2max - commargs[BETAMIN]);
-                pyranges[2*i+1].setlower(M_PI - asina2b2max - commargs[BETAMAX]);
-                pyranges[2*i+1].setupper(M_PI - asina2b2min - commargs[BETAMIN]);
+                pyranges.add(
+                            asina2b2min - commargs[BETAMAX],
+                            asina2b2max - commargs[BETAMIN]
+                            );
+                pyranges.add(
+                            M_PI - asina2b2max - commargs[BETAMAX],
+                            M_PI - asina2b2min - commargs[BETAMIN]
+                            );
                 //case: p<0
-                pyranges[2*i+2*maxp].setlower( -asina2b2max - commargs[BETAMAX]);
-                pyranges[2*i+2*maxp].setupper( -asina2b2min - commargs[BETAMIN]);
-                pyranges[2*i+1+2*maxp].setlower(M_PI + asina2b2min - commargs[BETAMAX]);
-                pyranges[2*i+1+2*maxp].setupper(M_PI + asina2b2max - commargs[BETAMIN]);
+                pyranges.add(
+                            -asina2b2max - commargs[BETAMAX],
+                            -asina2b2min - commargs[BETAMIN]
+                            );
+                pyranges.add(
+                            M_PI + asina2b2min - commargs[BETAMAX],
+                            M_PI + asina2b2max - commargs[BETAMIN]
+                            );
             }
         }
         //99 bottles of bugs on the wall, 99 bottles of bugs. You get one down and fix it up, 99 bottles of bugs...
         //100 bottles of bugs on the wall, 100 bottles of bugs....
 
-        std::vector<anglerange> yoverlaps;
-        for(i=0;i<4*maxo+2;i++)
-        {
-            for(j=0;j<4*maxp+2;j++)
-            {
-                anglerange tmp = qyranges[i].overlap(pyranges[j]);
-                if(!(tmp.isempty()))
-                {
-                    yoverlaps.push_back(tmp);
-                }
-            }
-        }
+        angleset yoverlaps = pyranges.overlap(qyranges);
+
+        angleset coincident;
+        coincident=xoverlaps;
+        coincident.add(yoverlaps);
 
         //to be a commensurate match, an angle has to be in both, x- and yoverlaps
-        std::vector<anglerange> commensurate;
-        for(i=0;i<xoverlaps.size();i++)
-        {
-            for(j=0;j<yoverlaps.size();j++)
-            {
-                anglerange tmp = xoverlaps[i].overlap(yoverlaps[j]);
-                if(!(tmp.isempty()))
-                {
-                    commensurate.push_back(tmp);
-                }
-            }
-        }
-/*
-        cout << "Possible coincident lattice matches with px, qx:" << std::endl;
-        for(i=0;i<xoverlaps.size();i++)
-        {
-            cout << (xoverlaps.at(i)).getlower().getval()*180/M_PI << " " << (xoverlaps.at(i)).getupper().getval()*180/M_PI << std::endl;
-        }
-        cout << "Possible coincident lattice matches with qy, py:" << std::endl;
-        for(i=0;i<yoverlaps.size();i++)
-        {
-            cout << (yoverlaps.at(i)).getlower().getval()*180/M_PI << " " << (yoverlaps.at(i)).getupper().getval()*180/M_PI << std::endl;
-        }
-*/
-        //to make the output more readable, combine the ranges.
-        //first: copy xranges and yranges together:
-        std::vector<anglerange> ranges;
-        ranges.reserve(xoverlaps.size()+yoverlaps.size()+1);
-        ranges.insert(ranges.end(),xoverlaps.begin(),xoverlaps.end());
-        ranges.insert(ranges.end(),yoverlaps.begin(),yoverlaps.end());
-        if(ranges.size()>1) //combining elements only makes sense, if there are at least 2 elements to combine...
-        {
-            bool stop;
-            do
-            {
-                i=0;
-                stop=false;
-                do
-                {
-                    j=i+1;
-                    do
-                    {
-                        anglerange tmp = ranges.at(i).combine(ranges.at(j));
-                        if(!(tmp.isempty()))
-                        {
-                            stop=true;
-                            ranges.push_back(tmp);
-                            ranges.erase(ranges.begin()+j);
-                            ranges.erase(ranges.begin()+i);
-                        }
-                        j++;
-                    }
-                    while(!stop && j<ranges.size());
-                    i++;
-                }
-                while(!stop && i<ranges.size()-1); //the -1 is there, as for i=ranges.size() there is no valid j any more.
-            }
-            while(stop); //yes, here is stop, not !stop, as stop means: stop to iterate over elements, go back to main loop, which should only terminate, if the internal loops finished.
-        }
+        angleset commensurate = xoverlaps.overlap(yoverlaps);
 
-        //the same thing for commensurate...
-        if(commensurate.size()>1)
-        {
-            bool stop;
-            do
-            {
-                i=0;
-                stop=false;
-                do
-                {
-                    j=i+1;
-                    do
-                    {
-                        anglerange tmp = commensurate.at(i).combine(commensurate.at(j));
-                        if(!(tmp.isempty()))
-                        {
-                            stop=true;
-                            commensurate.push_back(tmp);
-                            commensurate.erase(commensurate.begin()+j);
-                            commensurate.erase(commensurate.begin()+i);
-                        }
-                        j++;
-                    }
-                    while(!stop && j<commensurate.size());
-                    i++;
-                }
-                while(!stop && i<commensurate.size()-1); //the -1 is there, as for i=commensurate.size() there is no valid j any more.
-            }
-            while(stop); //yes, here is stop, not !stop, as stop means: stop to iterate over elements, go back to main loop, which should only terminate, if the internal loops finished.
-        }
-
-        //again,for readability: sort the ranges by their lower limit:
-        {
-            std::sort(ranges.begin(),ranges.end(),[](const anglerange &a,const anglerange &b){return(a.getlower()<b.getlower());});
-            std::sort(commensurate.begin(),commensurate.end(),[](const anglerange &a,const anglerange &b){return(a.getlower()<b.getlower());});
-        }
-
-
-        cout << "Possible coincident lattice matches:" << std::endl;
-        for(i=0;i<ranges.size();i++)
-        {
-            cout << (ranges.at(i)).getlower().getval()*180/M_PI << " " << (ranges.at(i)).getupper().getval()*180/M_PI << std::endl;
-        }
-        cout << "Possible commensurate lattice matches:" << std::endl;
-        for(i=0;i<commensurate.size();i++)
-        {
-            cout << (commensurate.at(i)).getlower().getval()*180/M_PI << " " << (commensurate.at(i)).getupper().getval()*180/M_PI << std::endl;
-        }
+        //quick and dirrrty
+        coincident.sort();
+        commensurate.sort();
+        cout << "Coincident Matches:\n";
+        for_each(coincident.getrangesref().begin(),coincident.getrangesref().end(),[](anglerange i) {cout << i.getlower().getval()*180/M_PI << " " << i.getupper().getval()*180/M_PI << "\n"; });
+        cout << "Commensurate Matches:\n";
+        for_each(commensurate.getrangesref().begin(),commensurate.getrangesref().end(),[](anglerange i) {cout << i.getlower().getval()*180/M_PI << " " << i.getupper().getval()*180/M_PI << "\n"; });
     }
 }
 

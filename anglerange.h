@@ -38,14 +38,22 @@
 #define ANGLERANGE_H
 
 #include "angleclass.h"
+#include <stdexcept>
 
 class anglerange
 {
+public:
+    typedef enum sorttype {SRT_LOWER,SRT_UPPER,SRT_SIZE} sorttype;
 private:
     angleclass lowerborder;
     angleclass upperborder;
     bool upperset;
     bool lowerset;
+    bool fullcircle;
+    sorttype sortby; //for comparison operators
+    //default value: SRT_SIZE
+    //lower means sort by lower border, upper sort by upper border, and size sort by (upper-lower)
+    //only size cares about zero-crossing, the others just compare numeric values.
 public:
     //Default constructor: Both limits 0.0, marked as empty
     anglerange();
@@ -54,9 +62,18 @@ public:
     void setupper(const angleclass &newupper);
     void setempty(); //marks the range as empty.
 
+    //to change sort field
+    void setsorttype(const sorttype value);
+    const sorttype getsorttype();
+
     bool isempty() const; //returns true when the range is empty (or when one limit isn't set)
-    angleclass getlower() const; //warning: Does not check if empty
-    angleclass getupper() const; //warning: Does not check if empty
+    angleclass getlower() const; //warning: Does not check if empty, does not check if circle
+    angleclass getupper() const; //warning: Does not check if empty, does not check if circle
+    bool isinside(const angleclass &val) const; //check if angleclas val is in the range.
+
+    //to deal with full circles:
+    void setcircle(bool value);
+    bool iscircle() const;
 
     //this function calculates the overlap between this anglerange and another one, returning it as
     //a new anglerange.
@@ -65,6 +82,16 @@ public:
     //this function does the opposite of overlap: Both ranges are combined into one bigger range.
     //if they are disjoint, an empty range is given back.
     anglerange combine(const anglerange &other);
+
+    bool operator<(const anglerange &other) const;
+    bool operator>(const anglerange &other) const;
+    bool operator<=(const anglerange &other) const;
+    bool operator>=(const anglerange &other) const;
+
+    //these operators don't use sort order. They really compare by element!
+    //also: Two empty ranges are considered equal!
+    bool operator==(const anglerange &other) const;
+    bool operator!=(const anglerange &other) const;
 
 };
 

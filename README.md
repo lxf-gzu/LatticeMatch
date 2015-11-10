@@ -62,6 +62,15 @@ Both points together made writing the correct conditions for upper and lower bou
 of the result ranges a pain, and I'm pretty certain there might still be the one or the other
 bug hidden.
 
+##Compilation
+The easiest way to compile this program is by using the included cmake file. Simply run cmake,
+followed by make. The default build should use sane CFLAGS, and have the NDEBUG macro defined.  
+
+If you, for whatever reason, prefer to compile manually, just link all the
+.cpp files together in one executable. If you don't want to waste a lot of processor cycles,
+make sure to define the NDEBUG macro, as otherwise some quite CPU-heavy assertion checks are in
+place. For most compilers this can be done by passing the "-DNDEBUG" command line argument.
+
 ##Usage
 Using this program is quite easy: Just supply the input as command line parameters in this order:
 a1, a2, alpha, b1min, b1max, b2min, b2max, betamin, betamax

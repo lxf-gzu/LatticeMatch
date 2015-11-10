@@ -39,19 +39,19 @@ public:
     angleclass(const double setme);
 
     void setval(const double setme);
-    double getval();
+    double getval() const;
 
-    angleclass operator+(angleclass other);
-    angleclass operator-(angleclass other);
-    angleclass operator*(angleclass other);
-    angleclass operator/(angleclass other);
+    angleclass operator+(const angleclass other) const;
+    angleclass operator-(const angleclass other) const;
+    angleclass operator*(const angleclass other) const;
+    angleclass operator/(const angleclass other) const;
     //beware: these only compare the numeric value of the angle.
-    bool operator<(angleclass other);
-    bool operator>(angleclass other);
-    bool operator<=(angleclass other);
-    bool operator>=(angleclass other);
-    bool operator==(angleclass other);
-    bool operator!=(angleclass other);
+    bool operator<(const angleclass other) const;
+    bool operator>(const angleclass other) const;
+    bool operator<=(const angleclass other) const;
+    bool operator>=(const angleclass other) const;
+    bool operator==(const angleclass other) const;
+    bool operator!=(const angleclass other) const;
 };
 
 #endif // ANGLECLASS_H
