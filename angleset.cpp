@@ -114,9 +114,10 @@ void angleset::add(const anglerange &value)
     //this means: we *should not reuse* this function for adding anglesets.
     if(!value.isempty())
     {
+        consistent=false;
         storage.push_back(value);
         storage.back().setsorttype(anglerange::SRT_LOWER);
-        combine();
+        //combine();
     }
 }
 
@@ -125,14 +126,16 @@ void angleset::add(const angleset &value)
     storage.reserve(storage.size()+value.storage.size());
     storage.insert(storage.end(),value.storage.begin(),value.storage.end());
     //if value is a valid angleset, sort order is set to SRT_LOWER for all fields.
-    combine();
+    consistent=false;
+    //combine();
 }
 
 void angleset::add(const double &lower, const double &upper)
 {
     storage.push_back(anglerange(lower,upper));
     storage.back().setsorttype(anglerange::SRT_LOWER);
-    combine();
+    consistent=false;
+    //combine();
 }
 
 
@@ -164,25 +167,34 @@ angleset angleset::overlap(const angleset &other)
                     retval.add(overlap(i));
                 }
                 );
+    if(!other.consistent)
+        retval.combine();
     return(retval);
 }
 
 std::vector<anglerange> angleset::getranges()
 {
+    if(!consistent)
+        combine();
     return storage;
 }
 
 const std::vector<anglerange>& angleset::getrangesref()
 {
+    if(!consistent)
+        combine();
     return storage;
 }
 
 void angleset::clear()
 {
     storage.clear();
+    consistent=true;
 }
 
 void angleset::sort()
 {
+    if(!consistent)
+        combine();
     std::sort(storage.begin(),storage.end());
 }

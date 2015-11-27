@@ -77,11 +77,13 @@ public:
 
     //this function calculates the overlap between this anglerange and another one, returning it as
     //a new anglerange.
-    anglerange overlap(const anglerange &other);
+    anglerange overlap(const anglerange &other) const;
 
     //this function does the opposite of overlap: Both ranges are combined into one bigger range.
     //if they are disjoint, an empty range is given back.
-    anglerange combine(const anglerange &other);
+    anglerange combine(const anglerange &other) const;
+
+    //a subtract function is not possible at this level, as single angle ranges could get disjoint by it.
 
     bool operator<(const anglerange &other) const;
     bool operator>(const anglerange &other) const;

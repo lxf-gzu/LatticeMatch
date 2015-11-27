@@ -144,7 +144,7 @@ bool anglerange::isinside(const angleclass &val) const
     }
 }
 
-anglerange anglerange::overlap(const anglerange &other)
+anglerange anglerange::overlap(const anglerange &other) const
 {
     //storage for the return value:
     anglerange retval; //anglerange constructor without arguments: emtpy range [0:0]
@@ -239,7 +239,7 @@ anglerange anglerange::overlap(const anglerange &other)
     return(retval);
 }
 
-anglerange anglerange::combine(const anglerange &other)
+anglerange anglerange::combine(const anglerange &other) const
 {
     anglerange retval;
     retval.setsorttype(sortby); //return value inherits current sorttype.
