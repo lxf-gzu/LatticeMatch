@@ -133,268 +133,285 @@ int main(int argc, char* argv[])
         //Now the input should be sanitized.
         //determine number of ranges for px, qx
         //as sin(alpha) can be negative -> fabs
-        unsigned int maxn,maxm;
-        maxn=fabs(commargs[B1MAX]/(commargs[A1]*sin(commargs[ALPHA])));
-        maxm=fabs(commargs[B2MAX]/(commargs[A1]*sin(commargs[ALPHA])));
-        //solutions run from -maxn to maxn, and from -maxm to maxm.
-        //Due to the ambiguity of asin, two solutions exist for each value of n and m
-        //This means, that (2*maxn+1)*2 solutions exist, the same for m.
-        angleset pxranges;
-        pxranges.reserve(4*maxn+2); //reserve memory, so adding stuff is faster...
-        angleset qxranges;
-        qxranges.reserve(4*maxm+2);
 
-        //up to now it was more or less dull C code. Now comes the first real difference:
-        //As asin changes sign together with its argument, one has to treat positive and negative n differently
-        //first the special case n=0:
-        pxranges.add(commargs[ALPHA],commargs[ALPHA]);
-        pxranges.add(commargs[ALPHA] - M_PI, commargs[ALPHA] - M_PI);
-        //now the slightly more difficult case: n>0
-        for(i=1;i<=maxn;i++){
-            //while factoring out the asin doesn't improve performance much - it's only used twice, it improves readability, as the important thing in the formulas below
-            //are the signs.
-            //the fmax and fmin are there, because maxn was calculated using B1MAX. Witht B1MIN the argument of arcsine can very well be outside its defined range.
-            double asina1b1min=asin(fmax(-1.0,fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
-            double asina1b1max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]);
-            //we need to consider that sin(alpha) can be negative. In that case the sign of the asin will change as well.
-            if(asina1b1min>=0)
-            {
-                pxranges.add(
-                            commargs[ALPHA] - asina1b1min,
-                            commargs[ALPHA] - asina1b1max
-                            );
-                pxranges.add(
-                            commargs[ALPHA] - M_PI + asina1b1max,
-                            commargs[ALPHA] - M_PI + asina1b1min
-                            );
-                //and the most difficult case: n<0
-                //here the arcsin is negative. as i is positive, I'll just change the sign in front of the arcsin.
-                pxranges.add(
-                            commargs[ALPHA] + asina1b1max,
-                            commargs[ALPHA] + asina1b1min
-                            );
-                pxranges.add(
-                            commargs[ALPHA] - M_PI - asina1b1min,
-                            commargs[ALPHA] - M_PI - asina1b1max
-                            );
-            }
-            else
-            {
-                //just as above, but with upper and lower limits switched
-                pxranges.add(
-                            commargs[ALPHA] - asina1b1max,
-                            commargs[ALPHA] - asina1b1min
-                            );
-                pxranges.add(
-                            commargs[ALPHA] - M_PI + asina1b1min,
-                            commargs[ALPHA] - M_PI + asina1b1max
-                            );
-                //n<0
-                pxranges.add(
-                            commargs[ALPHA] + asina1b1min,
-                            commargs[ALPHA] + asina1b1max
-                            );
-                pxranges.add(
-                            commargs[ALPHA] - M_PI - asina1b1max,
-                            commargs[ALPHA] - M_PI - asina1b1min
-                            );
-            }
-        }
-        //same nonsense for qxranges
-        //first the easy part: m=0;
-        qxranges.add(
-                    commargs[ALPHA] - commargs[BETAMAX],
-                    commargs[ALPHA] - commargs[BETAMIN]
-                    );
-        qxranges.add(
-                    commargs[ALPHA] - commargs[BETAMAX] - M_PI,
-                    commargs[ALPHA] - commargs[BETAMIN] - M_PI
-                    );
-        //now the slightly more difficult case: m>0;
-        for(i=1;i<=maxm;i++){
-            //also here, the asin values are factored out for improved readability.
-            double asina1b2min=asin(fmax(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0),-1.0));
-            double asina1b2max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]);
-            //same here: keep in mind that sin(alpha) can be negative:
-            if(asina1b2min>=0)
-            {
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - asina1b2min,
-                            commargs[ALPHA] - commargs[BETAMIN] - asina1b2max
-                            );
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2max,
-                            commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2min
-                            );
-                //and last, but not leasst, the most difficult, m<0 - here the arcsin is negative;
-                //as i is positive, I'll just change the sign in front of the arcsin.
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] + asina1b2max,
-                            commargs[ALPHA] - commargs[BETAMIN] + asina1b2min
-                            );
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2min,
-                            commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2max
-                            );
-            }
-            else
-            {
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - asina1b2max,
-                            commargs[ALPHA] - commargs[BETAMIN] - asina1b2min
-                            );
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2min,
-                            commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2max
-                            );
-                //m<0
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] + asina1b2min,
-                            commargs[ALPHA] - commargs[BETAMIN] + asina1b2max
-                            );
-                qxranges.add(
-                            commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2max,
-                            commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2min
-                            );
-            }
-        }
-        //Calculate the overlap between these two:
-        angleset xoverlaps=pxranges.overlap(qxranges);
-
-        //ok, same thing for qy, py:
-        //I know that this is wasteful regarding RAM, but well, we're still talking about bytes, not about megabytes ;-)
-        unsigned int maxo, maxp;
-        maxo=fabs(commargs[B1MAX]/(commargs[A2]*sin(commargs[ALPHA])));
-        maxp=fabs(commargs[B2MAX]/(commargs[A2]*sin(commargs[ALPHA])));
-        angleset qyranges;
-        qyranges.reserve(4*maxo+2);
-        angleset pyranges;
-        pyranges.reserve(4*maxp+2);
-
-        //now let's start with qyranges. As previously we need to consider the "sign" of o,p, and sin(alpha)
-        //first: o=0
-        qyranges.add(0.0,0.0);
-        qyranges.add(M_PI,M_PI);
-        for(i=1;i<=maxo;i++)
+        //if the substrate is hexagonal, we need to run the whole calculation twice: Once for the lattice vectors given by the user, and once for the angle changed by 60°.
+        //don't judge me by the following line, it's there because I'm too lazy to care about the floating point precision.
+        char loops=1;
+        if(commargs[ALPHA]==60.0*M_PI/180.0 || commargs[ALPHA]==120.0*M_PI/180.0 || commargs[ALPHA]==240.0*M_PI/180.0 || commargs[ALPHA]==300.0*M_PI/180.0)
         {
-            //also here: factor out the asin for improved readability.
-            double asina2b1min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
-            double asina2b1max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]);
-            //is sin(alpha)>0?
-            if(asina2b1max>=0)
-            {
-                //case: o>0
-                qyranges.add(
-                            asina2b1max,
-                            asina2b1min
-                            );
-                qyranges.add(
-                            M_PI - asina2b1min,
-                            M_PI - asina2b1max
-                            );
-                //case: o<0
-                qyranges.add(
-                            -asina2b1min,
-                            -asina2b1max
-                            );
-                qyranges.add(
-                            M_PI + asina2b1max,
-                            M_PI + asina2b1min
-                            );
-            }
-            else
-            {
-                //case: o>0
-                qyranges.add(
-                            asina2b1min,
-                            asina2b1max
-                            );
-                qyranges.add(
-                            M_PI - asina2b1max,
-                            M_PI - asina2b1min
-                            );
-                //case: o<0
-                qyranges.add(
-                            -asina2b1max,
-                            -asina2b1min
-                            );
-                qyranges.add(
-                            M_PI + asina2b1min,
-                            M_PI + asina2b1max
-                            );
-            }
+            loops=2;
+            commargs[ALPHA]=60.0*M_PI/180.0;
         }
-        //that was too easy. Probably it's buggy as hell...
-        //now to py
-        pyranges.add(
-                    -commargs[BETAMAX],
-                    -commargs[BETAMIN]
-                    );
-        pyranges.add(
-                    M_PI - commargs[BETAMAX],
-                    M_PI - commargs[BETAMIN]
-                    );
-        for(i=1;i<=maxp;i++)
-        {
-            //and again: readability
-            double asina2b2min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN])));
-            double asina2b2max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX]);
-            if(asina2b2max>=0)
-            {
-                //case: p>0
-                pyranges.add(
-                            asina2b2max - commargs[BETAMAX],
-                            asina2b2min - commargs[BETAMIN]
-                            );
-                pyranges.add(
-                            M_PI - asina2b2min - commargs[BETAMAX],
-                            M_PI - asina2b2max - commargs[BETAMIN]
-                            );
-                //case: p<0
-                pyranges.add(
-                            -asina2b2min - commargs[BETAMAX],
-                            -asina2b2max - commargs[BETAMIN]
-                            );
-                pyranges.add(
-                            M_PI + asina2b2max - commargs[BETAMAX],
-                            M_PI + asina2b2min - commargs[BETAMIN]
-                            );
-            }
-            else
-            {
-                //ok, here the asin is of opposite sign!
-                //case p>0
-                pyranges.add(
-                            asina2b2min - commargs[BETAMAX],
-                            asina2b2max - commargs[BETAMIN]
-                            );
-                pyranges.add(
-                            M_PI - asina2b2max - commargs[BETAMAX],
-                            M_PI - asina2b2min - commargs[BETAMIN]
-                            );
-                //case: p<0
-                pyranges.add(
-                            -asina2b2max - commargs[BETAMAX],
-                            -asina2b2min - commargs[BETAMIN]
-                            );
-                pyranges.add(
-                            M_PI + asina2b2min - commargs[BETAMAX],
-                            M_PI + asina2b2max - commargs[BETAMIN]
-                            );
-            }
-        }
-        //99 bottles of bugs on the wall, 99 bottles of bugs. You get one down and fix it up, 99 bottles of bugs...
-        //100 bottles of bugs on the wall, 100 bottles of bugs....
-
-        angleset yoverlaps = pyranges.overlap(qyranges);
-
         angleset coincident;
-        coincident=xoverlaps;
-        coincident.add(yoverlaps);
+        angleset commensurate;
+        char hexcounter;
+        for(hexcounter=0;hexcounter<loops;++hexcounter)
+        {
+            unsigned int maxn,maxm;
+            maxn=fabs(commargs[B1MAX]/(commargs[A1]*sin(commargs[ALPHA])));
+            maxm=fabs(commargs[B2MAX]/(commargs[A1]*sin(commargs[ALPHA])));
+            //solutions run from -maxn to maxn, and from -maxm to maxm.
+            //Due to the ambiguity of asin, two solutions exist for each value of n and m
+            //This means, that (2*maxn+1)*2 solutions exist, the same for m.
+            angleset pxranges;
+            pxranges.reserve(4*maxn+2); //reserve memory, so adding stuff is faster...
+            angleset qxranges;
+            qxranges.reserve(4*maxm+2);
 
-        //to be a commensurate match, an angle has to be in both, x- and yoverlaps
-        angleset commensurate = xoverlaps.overlap(yoverlaps);
+            //up to now it was more or less dull C code. Now comes the first real difference:
+            //As asin changes sign together with its argument, one has to treat positive and negative n differently
+            //first the special case n=0:
+            pxranges.add(commargs[ALPHA],commargs[ALPHA]);
+            pxranges.add(commargs[ALPHA] - M_PI, commargs[ALPHA] - M_PI);
+            //now the slightly more difficult case: n>0
+            for(i=1;i<=maxn;i++){
+                //while factoring out the asin doesn't improve performance much - it's only used twice, it improves readability, as the important thing in the formulas below
+                //are the signs.
+                //the fmax and fmin are there, because maxn was calculated using B1MAX. Witht B1MIN the argument of arcsine can very well be outside its defined range.
+                double asina1b1min=asin(fmax(-1.0,fmin(1.0,i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MIN])));
+                double asina1b1max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B1MAX]);
+                //we need to consider that sin(alpha) can be negative. In that case the sign of the asin will change as well.
+                if(asina1b1min>=0)
+                {
+                    pxranges.add(
+                                commargs[ALPHA] - asina1b1min,
+                                commargs[ALPHA] - asina1b1max
+                                );
+                    pxranges.add(
+                                commargs[ALPHA] - M_PI + asina1b1max,
+                                commargs[ALPHA] - M_PI + asina1b1min
+                                );
+                    //and the most difficult case: n<0
+                    //here the arcsin is negative. as i is positive, I'll just change the sign in front of the arcsin.
+                    pxranges.add(
+                                commargs[ALPHA] + asina1b1max,
+                                commargs[ALPHA] + asina1b1min
+                                );
+                    pxranges.add(
+                                commargs[ALPHA] - M_PI - asina1b1min,
+                                commargs[ALPHA] - M_PI - asina1b1max
+                                );
+                }
+                else
+                {
+                    //just as above, but with upper and lower limits switched
+                    pxranges.add(
+                                commargs[ALPHA] - asina1b1max,
+                                commargs[ALPHA] - asina1b1min
+                                );
+                    pxranges.add(
+                                commargs[ALPHA] - M_PI + asina1b1min,
+                                commargs[ALPHA] - M_PI + asina1b1max
+                                );
+                    //n<0
+                    pxranges.add(
+                                commargs[ALPHA] + asina1b1min,
+                                commargs[ALPHA] + asina1b1max
+                                );
+                    pxranges.add(
+                                commargs[ALPHA] - M_PI - asina1b1max,
+                                commargs[ALPHA] - M_PI - asina1b1min
+                                );
+                }
+            }
+            //same nonsense for qxranges
+            //first the easy part: m=0;
+            qxranges.add(
+                        commargs[ALPHA] - commargs[BETAMAX],
+                        commargs[ALPHA] - commargs[BETAMIN]
+                        );
+            qxranges.add(
+                        commargs[ALPHA] - commargs[BETAMAX] - M_PI,
+                        commargs[ALPHA] - commargs[BETAMIN] - M_PI
+                        );
+            //now the slightly more difficult case: m>0;
+            for(i=1;i<=maxm;i++){
+                //also here, the asin values are factored out for improved readability.
+                double asina1b2min=asin(fmax(fmin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MIN],1.0),-1.0));
+                double asina1b2max=asin(i*commargs[A1]*sin(commargs[ALPHA])/commargs[B2MAX]);
+                //same here: keep in mind that sin(alpha) can be negative:
+                if(asina1b2min>=0)
+                {
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - asina1b2min,
+                                commargs[ALPHA] - commargs[BETAMIN] - asina1b2max
+                                );
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2max,
+                                commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2min
+                                );
+                    //and last, but not leasst, the most difficult, m<0 - here the arcsin is negative;
+                    //as i is positive, I'll just change the sign in front of the arcsin.
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] + asina1b2max,
+                                commargs[ALPHA] - commargs[BETAMIN] + asina1b2min
+                                );
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2min,
+                                commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2max
+                                );
+                }
+                else
+                {
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - asina1b2max,
+                                commargs[ALPHA] - commargs[BETAMIN] - asina1b2min
+                                );
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - M_PI + asina1b2min,
+                                commargs[ALPHA] - commargs[BETAMIN] - M_PI + asina1b2max
+                                );
+                    //m<0
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] + asina1b2min,
+                                commargs[ALPHA] - commargs[BETAMIN] + asina1b2max
+                                );
+                    qxranges.add(
+                                commargs[ALPHA] - commargs[BETAMAX] - M_PI - asina1b2max,
+                                commargs[ALPHA] - commargs[BETAMIN] - M_PI - asina1b2min
+                                );
+                }
+            }
+            //Calculate the overlap between these two:
+            angleset xoverlaps=pxranges.overlap(qxranges);
 
+            //ok, same thing for qy, py:
+            //I know that this is wasteful regarding RAM, but well, we're still talking about bytes, not about megabytes ;-)
+            unsigned int maxo, maxp;
+            maxo=fabs(commargs[B1MAX]/(commargs[A2]*sin(commargs[ALPHA])));
+            maxp=fabs(commargs[B2MAX]/(commargs[A2]*sin(commargs[ALPHA])));
+            angleset qyranges;
+            qyranges.reserve(4*maxo+2);
+            angleset pyranges;
+            pyranges.reserve(4*maxp+2);
+
+            //now let's start with qyranges. As previously we need to consider the "sign" of o,p, and sin(alpha)
+            //first: o=0
+            qyranges.add(0.0,0.0);
+            qyranges.add(M_PI,M_PI);
+            for(i=1;i<=maxo;i++)
+            {
+                //also here: factor out the asin for improved readability.
+                double asina2b1min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MIN])));
+                double asina2b1max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B1MAX]);
+                //is sin(alpha)>0?
+                if(asina2b1max>=0)
+                {
+                    //case: o>0
+                    qyranges.add(
+                                asina2b1max,
+                                asina2b1min
+                                );
+                    qyranges.add(
+                                M_PI - asina2b1min,
+                                M_PI - asina2b1max
+                                );
+                    //case: o<0
+                    qyranges.add(
+                                -asina2b1min,
+                                -asina2b1max
+                                );
+                    qyranges.add(
+                                M_PI + asina2b1max,
+                                M_PI + asina2b1min
+                                );
+                }
+                else
+                {
+                    //case: o>0
+                    qyranges.add(
+                                asina2b1min,
+                                asina2b1max
+                                );
+                    qyranges.add(
+                                M_PI - asina2b1max,
+                                M_PI - asina2b1min
+                                );
+                    //case: o<0
+                    qyranges.add(
+                                -asina2b1max,
+                                -asina2b1min
+                                );
+                    qyranges.add(
+                                M_PI + asina2b1min,
+                                M_PI + asina2b1max
+                                );
+                }
+            }
+            //that was too easy. Probably it's buggy as hell...
+            //now to py
+            pyranges.add(
+                        -commargs[BETAMAX],
+                        -commargs[BETAMIN]
+                        );
+            pyranges.add(
+                        M_PI - commargs[BETAMAX],
+                        M_PI - commargs[BETAMIN]
+                        );
+            for(i=1;i<=maxp;i++)
+            {
+                //and again: readability
+                double asina2b2min = asin(fmax(-1.0,fmin(1.0,i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MIN])));
+                double asina2b2max = asin(i*commargs[A2]*sin(commargs[ALPHA])/commargs[B2MAX]);
+                if(asina2b2max>=0)
+                {
+                    //case: p>0
+                    pyranges.add(
+                                asina2b2max - commargs[BETAMAX],
+                                asina2b2min - commargs[BETAMIN]
+                                );
+                    pyranges.add(
+                                M_PI - asina2b2min - commargs[BETAMAX],
+                                M_PI - asina2b2max - commargs[BETAMIN]
+                                );
+                    //case: p<0
+                    pyranges.add(
+                                -asina2b2min - commargs[BETAMAX],
+                                -asina2b2max - commargs[BETAMIN]
+                                );
+                    pyranges.add(
+                                M_PI + asina2b2max - commargs[BETAMAX],
+                                M_PI + asina2b2min - commargs[BETAMIN]
+                                );
+                }
+                else
+                {
+                    //ok, here the asin is of opposite sign!
+                    //case p>0
+                    pyranges.add(
+                                asina2b2min - commargs[BETAMAX],
+                                asina2b2max - commargs[BETAMIN]
+                                );
+                    pyranges.add(
+                                M_PI - asina2b2max - commargs[BETAMAX],
+                                M_PI - asina2b2min - commargs[BETAMIN]
+                                );
+                    //case: p<0
+                    pyranges.add(
+                                -asina2b2max - commargs[BETAMAX],
+                                -asina2b2min - commargs[BETAMIN]
+                                );
+                    pyranges.add(
+                                M_PI + asina2b2min - commargs[BETAMAX],
+                                M_PI + asina2b2max - commargs[BETAMIN]
+                                );
+                }
+            }
+            //99 bottles of bugs on the wall, 99 bottles of bugs. You get one down and fix it up, 99 bottles of bugs...
+            //100 bottles of bugs on the wall, 100 bottles of bugs....
+
+            angleset yoverlaps = pyranges.overlap(qyranges);
+
+
+            coincident.add(xoverlaps);
+            coincident.add(yoverlaps);
+
+            //to be a commensurate match, an angle has to be in both, x- and yoverlaps
+            commensurate.add(xoverlaps.overlap(yoverlaps));
+
+            //should there be a second run, we need to increase alpha by 60°.
+            commargs[ALPHA]+=M_PI/3.0;
+        }
         //quick and dirrrty
         coincident.sort();
         commensurate.sort();
